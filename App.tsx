@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import ArchiveList from './components/ArchiveList';
@@ -270,19 +271,22 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout 
-      activeView={activeView} 
-      setView={setActiveView} 
-      currentUser={currentUser}
-      onLogout={() => setCurrentUser(null)}
-      appSettings={appSettings}
-      categories={categories}
-      onCategorySelect={setSelectedCategory}
-    >
-      <div className="animate-fadeIn transition-all duration-500 min-h-full">
-        {renderContent()}
-      </div>
-    </Layout>
+    <>
+      <Layout 
+        activeView={activeView} 
+        setView={setActiveView} 
+        currentUser={currentUser}
+        onLogout={() => setCurrentUser(null)}
+        appSettings={appSettings}
+        categories={categories}
+        onCategorySelect={setSelectedCategory}
+      >
+        <div className="animate-fadeIn transition-all duration-500 min-h-full">
+          {renderContent()}
+        </div>
+      </Layout>
+      <Analytics />
+    </>
   );
 };
 
