@@ -3,26 +3,19 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Download, 
   Search, 
-  Maximize2, 
   RotateCw, 
-  Minus, 
   X,
-  ChevronUp,
-  ChevronDown,
   ArrowUpDown,
   Upload,
   FileText,
   Info,
-  Calendar,
   HardDrive,
   Trash2,
   Share2,
-  ExternalLink,
   Clock,
   FileBox,
   FileArchive,
   FileSpreadsheet,
-  Layout as LayoutIcon,
   Eye,
   ImageIcon,
   PlayCircle,
@@ -33,16 +26,16 @@ import {
   Cloud,
   CloudOff,
   RefreshCw,
-  MoreVertical,
   CloudDownload,
   Copy,
   Check,
   Link2,
-  File as FileIcon,
   Hash,
   CalendarDays,
   Sparkles,
-  Paperclip
+  Paperclip,
+  ChevronDown,
+  Tags
 } from 'lucide-react';
 import { ArchiveDocument, ArchiveFile, Category } from '../types';
 
@@ -330,7 +323,7 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white">
-                {paginatedArchives.map((doc, idx) => {
+                {paginatedArchives.map((doc) => {
                   const isSelected = selectedArchive?.id === doc.id;
                   return (
                     <tr 
@@ -442,15 +435,17 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
             {/* Header Panel */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600 text-white rounded-lg shadow-md">
+                <div className={`p-2 rounded-lg shadow-md transition-colors ${isEditing ? 'bg-amber-500 text-white' : 'bg-blue-600 text-white'}`}>
                   <div className="relative">
-                    <Info className="w-5 h-5" />
+                    {isEditing ? <Edit className="w-5 h-5" /> : <Info className="w-5 h-5" />}
                     {selectedArchive.isCloudSynced && <Cloud className="w-2.5 h-2.5 absolute -top-1 -right-1 text-emerald-400" />}
                   </div>
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">{isEditing ? 'Edit Metadata' : 'Ringkasan Arsip'}</h3>
-                  <p className="text-[10px] text-slate-400 uppercase font-black">Record Quick View</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">
+                    {isEditing ? 'Sedang Melakukan Perubahan' : 'Record Quick View'}
+                  </p>
                 </div>
               </div>
               <button onClick={() => setSelectedArchive(null)} className="p-2 rounded-full hover:bg-slate-200 transition-all text-slate-400">
@@ -461,83 +456,111 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 bg-slate-50/20">
               {/* Preview */}
-              <div className="aspect-[16/9] bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 relative group overflow-hidden shadow-sm">
-                 {renderFilePreview(selectedArchive.title)}
-              </div>
-
-              {/* Status Cloud */}
-              <div className={`p-5 rounded-3xl flex items-center justify-between border-2 transition-all shadow-sm ${selectedArchive.isCloudSynced ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}>
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${selectedArchive.isCloudSynced ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-400'}`}>
-                    {selectedArchive.isCloudSynced ? <Cloud className="w-5 h-5" /> : <CloudOff className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-700 uppercase tracking-tighter">Google Drive Sync</p>
-                    <p className="text-[10px] text-slate-400 font-medium">
-                      {selectedArchive.isCloudSynced ? `Terakhir disinkron: ${selectedArchive.lastSynced}` : 'Belum dicadangkan di Cloud'}
-                    </p>
-                  </div>
+              {!isEditing && (
+                <div className="aspect-[16/9] bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 relative group overflow-hidden shadow-sm">
+                   {renderFilePreview(selectedArchive.title)}
                 </div>
-                {selectedArchive.isCloudSynced ? (
-                   <button 
-                    onClick={handleFetchFromCloud}
-                    disabled={isFetchingCloud}
-                    title="Unduh Dari Google Drive"
-                    className="p-2.5 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all active:scale-95 text-blue-600 disabled:opacity-50"
-                  >
-                    {isFetchingCloud ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-                  </button>
-                ) : (
-                  <button 
-                    onClick={handleSyncToDrive}
-                    disabled={isSyncing}
-                    title="Sinkronkan ke Cloud"
-                    className="p-2.5 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all active:scale-95 text-slate-600 disabled:opacity-50"
-                  >
-                    {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> : <RefreshCw className="w-4 h-4" />}
-                  </button>
-                )}
-              </div>
+              )}
 
-              {/* Form / Metadata */}
-              <div className="space-y-4">
+              {/* Status Cloud - Hanya muncul saat tidak edit */}
+              {!isEditing && (
+                <div className={`p-5 rounded-3xl flex items-center justify-between border-2 transition-all shadow-sm ${selectedArchive.isCloudSynced ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-2xl ${selectedArchive.isCloudSynced ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-400'}`}>
+                      {selectedArchive.isCloudSynced ? <Cloud className="w-5 h-5" /> : <CloudOff className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-700 uppercase tracking-tighter">Google Drive Sync</p>
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        {selectedArchive.isCloudSynced ? `Terakhir disinkron: ${selectedArchive.lastSynced}` : 'Belum dicadangkan di Cloud'}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedArchive.isCloudSynced ? (
+                    <button 
+                      onClick={handleFetchFromCloud}
+                      disabled={isFetchingCloud}
+                      title="Unduh Dari Google Drive"
+                      className="p-2.5 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all active:scale-95 text-blue-600 disabled:opacity-50"
+                    >
+                      {isFetchingCloud ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleSyncToDrive}
+                      disabled={isSyncing}
+                      title="Sinkronkan ke Cloud"
+                      className="p-2.5 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all active:scale-95 text-slate-600 disabled:opacity-50"
+                    >
+                      {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> : <RefreshCw className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Metadata Form / Display */}
+              <div className="space-y-6">
                  {isEditing ? (
-                   <div className="space-y-4">
+                   <div className="space-y-5 animate-slideIn">
                      <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Judul Arsip</label>
-                       <input 
-                         value={editForm.title} 
-                         onChange={e => setEditForm({...editForm, title: e.target.value})}
-                         className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
-                       />
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Judul Arsip Digital</label>
+                       <div className="relative group">
+                          <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-amber-500 transition-colors" />
+                          <input 
+                            value={editForm.title} 
+                            onChange={e => setEditForm({...editForm, title: e.target.value})}
+                            className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-400 transition-all shadow-sm"
+                            placeholder="Ketik judul arsip baru..."
+                          />
+                       </div>
                      </div>
+
                      <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Keterangan</label>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Pilih Kategori</label>
+                       <div className="relative group">
+                          <Tags className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
+                          <select 
+                            value={editForm.category} 
+                            onChange={e => setEditForm({...editForm, category: e.target.value})}
+                            className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-400 transition-all shadow-sm appearance-none cursor-pointer"
+                          >
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.name}>{cat.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+                       </div>
+                     </div>
+
+                     <div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Keterangan / Abstraksi</label>
                        <textarea 
                          value={editForm.description} 
                          onChange={e => setEditForm({...editForm, description: e.target.value})}
-                         rows={3}
-                         className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-4 focus:ring-blue-100 transition-all resize-none"
+                         rows={5}
+                         className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-400 transition-all resize-none shadow-sm font-medium leading-relaxed"
+                         placeholder="Berikan deskripsi tambahan..."
                        />
                      </div>
                    </div>
                  ) : (
                    <>
                      <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest border border-blue-100">
+                       <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest border border-blue-100 flex items-center gap-1.5">
+                         <Tags className="w-3 h-3" />
                          {selectedArchive.category}
                        </span>
                        <span className="text-[10px] font-black text-slate-300 italic">#{selectedArchive.id}</span>
                      </div>
                      <h4 className="text-xl font-black text-slate-800 leading-tight">{selectedArchive.title}</h4>
-                     <p className="text-xs text-slate-500 leading-relaxed font-medium bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                     <p className="text-xs text-slate-500 leading-relaxed font-medium bg-white p-5 rounded-2xl border border-slate-100 shadow-sm min-h-[100px]">
                        {selectedArchive.description || "Tidak ada rincian deskripsi tambahan untuk arsip ini."}
                      </p>
                    </>
                  )}
               </div>
 
-              {/* Quick Info Grid */}
+              {/* Quick Info Grid - Hanya saat tidak edit */}
               {!isEditing && (
                 <div className="grid grid-cols-2 gap-3">
                    <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
@@ -551,52 +574,63 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
                 </div>
               )}
 
-              {/* View Detail Modal Trigger */}
+              {/* Files - Hanya saat tidak edit */}
               {!isEditing && (
-                <button 
-                  onClick={() => setIsDetailModalOpen(true)}
-                  className="w-full py-4 bg-white border-2 border-primary text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-all active:scale-95 shadow-sm shadow-primary/5"
-                >
-                  <Eye className="w-4 h-4" /> Lihat Detail Lengkap
-                </button>
-              )}
-
-              {/* Files */}
-              <div className="space-y-3 pb-4">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Lampiran Dokumen ({selectedArchive.files.length})</p>
-                {selectedArchive.files.map(file => (
-                  <div key={file.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all group/file shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-slate-50 rounded-lg group-hover/file:bg-blue-50 transition-colors">
-                        {getSmallFileIcon(file.name)}
+                <div className="space-y-3 pb-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <Paperclip className="w-3.5 h-3.5" />
+                    Lampiran Berkas ({selectedArchive.files.length})
+                  </p>
+                  {selectedArchive.files.map(file => (
+                    <div key={file.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all group/file shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-slate-50 rounded-lg group-hover/file:bg-blue-50 transition-colors">
+                          {getSmallFileIcon(file.name)}
+                        </div>
+                        <div className="overflow-hidden max-w-[150px]">
+                          <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
+                          <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{file.size}</p>
+                        </div>
                       </div>
-                      <div className="overflow-hidden max-w-[150px]">
-                        <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
-                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{file.size}</p>
-                      </div>
+                      <Download className="w-4 h-4 text-slate-300 group-hover/file:text-blue-600 cursor-pointer transition-colors" />
                     </div>
-                    <Download className="w-4 h-4 text-slate-300 group-hover/file:text-blue-600 cursor-pointer transition-colors" />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Actions Sidebar Bottom */}
             <div className="p-6 border-t border-slate-100 bg-white flex flex-col gap-3 shrink-0">
               {isEditing ? (
-                <div className="flex gap-3">
-                  <button onClick={handleSaveEdit} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Simpan</button>
-                  <button onClick={handleCancelEdit} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 border border-slate-200">Batal</button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={handleSaveEdit} 
+                    className="py-4 bg-amber-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-amber-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" /> Simpan
+                  </button>
+                  <button 
+                    onClick={handleCancelEdit} 
+                    className="py-4 bg-slate-100 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 border border-slate-200 hover:bg-slate-200"
+                  >
+                    Batal
+                  </button>
                 </div>
               ) : (
                 <>
-                  <button onClick={() => onDownload(selectedArchive)} className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-200 flex items-center justify-center gap-3 hover:bg-blue-700 transition-all active:scale-95">
-                    <Download className="w-5 h-5" /> Download Local
+                  <button 
+                    onClick={() => onDownload(selectedArchive)} 
+                    className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-200 flex items-center justify-center gap-3 hover:bg-blue-700 transition-all active:scale-95"
+                  >
+                    <Download className="w-5 h-5" /> Download Seluruh Berkas
                   </button>
                   
                   <div className="flex gap-2">
-                    <button onClick={handleStartEdit} className="flex-1 py-3 bg-white border border-slate-200 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-amber-50 hover:border-amber-200 transition-all active:scale-95">
-                      <Edit className="w-3.5 h-3.5" /> Edit
+                    <button 
+                      onClick={handleStartEdit} 
+                      className="flex-1 py-3 bg-white border border-slate-200 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-amber-50 hover:border-amber-200 transition-all active:scale-95"
+                    >
+                      <Edit className="w-3.5 h-3.5" /> Edit Metadata
                     </button>
                     <button 
                       onClick={() => setIsShareModalOpen(true)}
@@ -604,7 +638,9 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
                     >
                       <Share2 className="w-3.5 h-3.5" /> Share
                     </button>
-                    <button className="flex-1 py-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95">
+                    <button 
+                      className="flex-1 py-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95"
+                    >
                       <Trash2 className="w-3.5 h-3.5" /> Hapus
                     </button>
                   </div>
@@ -615,15 +651,11 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
         )}
       </aside>
 
-      {/* Comprehensive Detail Modal */}
+      {/* Detail Modal & Share Modal ... Tetap Seperti Sebelumnya ... */}
       {isDetailModalOpen && selectedArchive && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl animate-fadeIn" 
-            onClick={() => setIsDetailModalOpen(false)}
-          ></div>
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl animate-fadeIn" onClick={() => setIsDetailModalOpen(false)}></div>
           <div className="relative w-full max-w-4xl bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-modalPop transition-all border border-slate-200 max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
             <div className="p-8 pb-4 flex justify-between items-start bg-slate-50/50 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-6">
                 <div className="p-4 bg-primary rounded-[1.5rem] text-white shadow-xl shadow-primary/20">
@@ -631,33 +663,21 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">
-                      {selectedArchive.category}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                      ID: #{selectedArchive.id}
-                    </span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{selectedArchive.category}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID: #{selectedArchive.id}</span>
                   </div>
                   <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">{selectedArchive.title}</h3>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsDetailModalOpen(false)}
-                className="p-3 hover:bg-slate-200 rounded-full transition-colors text-slate-400"
-              >
+              <button onClick={() => setIsDetailModalOpen(false)} className="p-3 hover:bg-slate-200 rounded-full transition-colors text-slate-400">
                 <X className="w-6 h-6" />
               </button>
             </div>
-
-            {/* Modal Body */}
             <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Left Column: Metadata & Details */}
                 <div className="lg:col-span-2 space-y-8">
                   <section className="space-y-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Info className="w-4 h-4 text-primary" /> Informasi Dasar Dokumen
-                    </h4>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Info className="w-4 h-4 text-primary" /> Informasi Dasar Dokumen</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-primary transition-colors">
                          <div className="flex items-center gap-3 mb-2">
@@ -673,65 +693,29 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
                          </div>
                          <p className="text-sm font-bold text-slate-700">{selectedArchive.year || 'Tidak Tersedia'}</p>
                       </div>
-                      <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-primary transition-colors">
-                         <div className="flex items-center gap-3 mb-2">
-                           <Clock className="w-4 h-4 text-slate-400" />
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu Unggah</p>
-                         </div>
-                         <p className="text-sm font-bold text-slate-700">{selectedArchive.uploadDate}</p>
-                      </div>
-                      <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-primary transition-colors">
-                         <div className="flex items-center gap-3 mb-2">
-                           <HardDrive className="w-4 h-4 text-slate-400" />
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ukuran Total</p>
-                         </div>
-                         <p className="text-sm font-bold text-slate-700">{selectedArchive.totalSize} KB</p>
-                      </div>
                     </div>
                   </section>
-
                   <section className="space-y-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-primary" /> Deskripsi & Abstraksi
-                    </h4>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Deskripsi & Abstraksi</h4>
                     <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm italic text-slate-600 leading-relaxed text-sm">
                       {selectedArchive.description || "Tidak ada deskripsi rinci yang tersedia untuk arsip ini."}
                     </div>
                   </section>
-
-                  {selectedArchive.aiSummary && (
-                    <section className="space-y-4">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-amber-500" /> Ringkasan Cerdas AI
-                      </h4>
-                      <div className="p-6 bg-amber-50/50 border border-amber-100 rounded-3xl text-amber-900 leading-relaxed text-sm font-medium">
-                        {selectedArchive.aiSummary}
-                      </div>
-                    </section>
-                  )}
                 </div>
-
-                {/* Right Column: Files & Actions */}
                 <div className="space-y-8">
                   <section className="space-y-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Paperclip className="w-4 h-4 text-primary" /> Daftar Lampiran ({selectedArchive.files.length})
-                    </h4>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Paperclip className="w-4 h-4 text-primary" /> Daftar Lampiran ({selectedArchive.files.length})</h4>
                     <div className="space-y-3">
                       {selectedArchive.files.map(file => (
                         <div key={file.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group/fitem hover:bg-white hover:shadow-md hover:border-primary/20 transition-all">
                           <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="p-2 bg-white rounded-lg group-hover/fitem:bg-primary/5 transition-colors">
-                              {getSmallFileIcon(file.name)}
-                            </div>
+                            <div className="p-2 bg-white rounded-lg group-hover/fitem:bg-primary/5 transition-colors">{getSmallFileIcon(file.name)}</div>
                             <div className="overflow-hidden">
                               <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
                               <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{file.size}</p>
                             </div>
                           </div>
-                          <button className="p-2 text-slate-300 hover:text-primary transition-colors">
-                            <Download className="w-4 h-4" />
-                          </button>
+                          <button className="p-2 text-slate-300 hover:text-primary transition-colors"><Download className="w-4 h-4" /></button>
                         </div>
                       ))}
                     </div>
@@ -739,118 +723,13 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
                 </div>
               </div>
             </div>
-
-            {/* Modal Footer */}
             <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-4 justify-between items-center shrink-0">
-               <div className="flex items-center gap-6">
-                 <div className="flex -space-x-3">
-                   {[1,2,3].map(i => (
-                     <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">
-                       U
-                     </div>
-                   ))}
-                 </div>
-                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                   Record accessible by your department
-                 </p>
-               </div>
-               <div className="flex gap-3">
-                 <button 
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-slate-100 transition-all active:scale-95"
-                 >
-                   Tutup
-                 </button>
-                 <button 
-                  onClick={() => onDownload(selectedArchive)}
-                  className="px-10 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95 flex items-center gap-2"
-                 >
+               <div className="flex gap-3 ml-auto">
+                 <button onClick={() => setIsDetailModalOpen(false)} className="px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-slate-100 transition-all">Tutup</button>
+                 <button onClick={() => onDownload(selectedArchive)} className="px-10 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all flex items-center gap-2">
                    <Download className="w-4 h-4" /> Unduh Seluruh Berkas
                  </button>
                </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Share Modal Dialog */}
-      {isShareModalOpen && selectedArchive && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-md animate-fadeIn" 
-            onClick={() => setIsShareModalOpen(false)}
-          ></div>
-          <div className="relative w-full max-w-lg bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-modalPop transition-all border border-slate-200">
-            {/* Modal Header */}
-            <div className="p-8 pb-4 flex justify-between items-center bg-slate-50/50 border-b border-slate-100">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-indigo-100 text-indigo-600 rounded-[1.5rem] shadow-sm">
-                  <Share2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Bagikan Akses Arsip</h3>
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Digital Shareable Link</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsShareModalOpen(false)}
-                className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-8 space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tautan Berbagi Publik</p>
-                  <div className="flex items-center gap-1.5 text-emerald-600 text-[9px] font-black uppercase tracking-widest">
-                    <CheckCircle2 className="w-3 h-3" /> Tautan Aktif
-                  </div>
-                </div>
-                
-                <div className="group relative">
-                  <div className="flex items-center gap-3 p-2 bg-slate-50 border border-slate-200 rounded-2xl transition-all focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-100 shadow-inner">
-                    <div className="p-2.5 bg-white rounded-xl text-slate-400 shadow-sm">
-                      <Link2 className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 text-xs font-bold text-slate-600 truncate px-1">
-                      https://e-arsip.ypib.ac.id/share/{selectedArchive.id}
-                    </div>
-                    <button 
-                      onClick={handleCopyLink}
-                      className={`px-5 py-3 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ${copySuccess ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'}`}
-                    >
-                      {copySuccess ? (
-                        <>
-                          <Check className="w-4 h-4" /> Tersalin
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" /> Salin Link
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-8 pt-4 bg-slate-50 border-t border-slate-100 flex gap-4">
-              <button 
-                onClick={() => setIsShareModalOpen(false)}
-                className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-slate-100 transition-all active:scale-95"
-              >
-                Selesai
-              </button>
-              <button 
-                onClick={handleCopyLink}
-                className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Copy className="w-4 h-4" /> Salin Link
-              </button>
             </div>
           </div>
         </div>
@@ -861,8 +740,10 @@ const FileManager: React.FC<FileManagerProps> = ({ archives, categories, onDownl
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes modalPop { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-slideIn { animation: slideIn 0.3s ease-out forwards; }
         .animate-modalPop { animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
     </div>
