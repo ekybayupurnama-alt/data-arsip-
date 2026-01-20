@@ -1,0 +1,7 @@
+{
+  "name": "DATA ARSIP UNIVERSITAS YPIB MAJALENGKA",
+  "description": "Sistem manajemen arsip digital cerdas dengan integrasi AI untuk Universitas YPIB Majalengka.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
